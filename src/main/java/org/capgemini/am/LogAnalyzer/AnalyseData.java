@@ -177,7 +177,7 @@ public class AnalyseData{
 			thirdPartyResponse = null;
 			
 			//delete the file
-			//new File(fileName).delete();
+			new File(fileName).delete();
 			
 			return 0;
 		} catch (Exception e) {	
