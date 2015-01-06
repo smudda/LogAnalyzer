@@ -25,7 +25,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>org.capgemini.am.LogAnalyzer.AnalyseData</mainClass>
+                            <mainClass>org.capgemini.am.LogAnalyzer.MainClass</mainClass>
                         </manifest>
                         <source>1.6</source>
                         <target>1.6</target>
@@ -40,7 +40,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>org.capgemini.am.LogAnalyzer.AnalyseData</mainClass>
+                            <mainClass>org.capgemini.am.LogAnalyzer.MainClass</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
