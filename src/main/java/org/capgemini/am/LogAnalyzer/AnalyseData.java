@@ -12,13 +12,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 
 public class AnalyseData{
 
     final static Logger ADLog = Logger.getLogger(AnalyseData.class);
-    
+    SimpleGraphiteClient objSimpleGraphiteClient;
     //Constants
     final static byte RequestTime = 0;
     final static byte ResponseTime = 1;
@@ -27,8 +28,28 @@ public class AnalyseData{
     Map<String, Map<String, Long[]>> thirdPartyResponse = new LinkedHashMap<String, Map<String, Long[]>>();	
 	
 	public AnalyseData() {
-		
+		objSimpleGraphiteClient = new SimpleGraphiteClient("10.91.80.132", 2003);
 	}
+	
+	public void extractData(String fileName){
+		
+		String sCurrentLine;		
+		try {
+			
+			//read the file
+			BufferedReader br = new BufferedReader(new FileReader(fileName));
+			
+			while ((sCurrentLine = br.readLine()) != null) {	
+				
+				if(sCurrentLine.contains("Requesting")) {
+					
+				}
+				
+			}
+		}catch(Exception e){
+			
+		}
+	}	
 	
 	public int analyseData(String fileName){
 		
@@ -135,10 +156,7 @@ public class AnalyseData{
 				Map<String, Long[]> CorrelationIDsandReqResTime = CorrelationIDsandReqResTimeEntry.getValue();
 								
 				Set<Entry<String, Long[]>> corrlationIDsEntry = CorrelationIDsandReqResTime.entrySet();
-				Iterator<Entry<String, Long[]>> corrlationIDsIterator = corrlationIDsEntry.iterator();
-				
-				
-				GraphiteReporter.openConnection();
+				Iterator<Entry<String, Long[]>> corrlationIDsIterator = corrlationIDsEntry.iterator();			
 				
 				//iterate through correlation ids				
 				while(corrlationIDsIterator.hasNext()){				
@@ -146,24 +164,20 @@ public class AnalyseData{
 					Long times[] = corrlationID.getValue();
 					if(times[1] != null)
 					{
-						ADLog.info(CorrelationIDsandReqResTimeEntry.getKey()+"::"+times[RequestTime]+"::"+times[ResponseTime]);
-						
-						//sending respone time data to Graphite
-						GraphiteReporter.sendMetrics(CorrelationIDsandReqResTimeEntry.getKey(), times[RequestTime], times[ResponseTime]);						
+						ADLog.info(CorrelationIDsandReqResTimeEntry.getKey()+"::"+times[RequestTime]/1000+"::"+new Integer(times[ResponseTime].toString())+""+new Date(times[RequestTime]/1000*1000));
+						//sending response time data to Graphite
+						objSimpleGraphiteClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(times[ResponseTime].toString()),times[RequestTime]/1000);
 					}
 					else // incoming request without response 
 					{						
 						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey()+"\n");
 					}					
-				}				
-				
-				GraphiteReporter.closeConnection();
-				
+				}			
 			}
 			thirdPartyResponse = null;
 			
 			//delete the file
-			new File(fileName).delete();
+			//new File(fileName).delete();
 			
 			return 0;
 		} catch (Exception e) {	
