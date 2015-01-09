@@ -83,7 +83,7 @@ public class SimpleGraphiteClient {
    *
    * @param key       The metric key
    * @param value     The metric value
-   * @param timeStamp the timestamp to use
+   * @param timeStamp the timestamp to use in seconds
    * @throws GraphiteException if writing to graphite fails
    */
   @SuppressWarnings("serial")

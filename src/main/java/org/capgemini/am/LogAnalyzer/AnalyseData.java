@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -20,6 +21,7 @@ public class AnalyseData{
 
     final static Logger ADLog = Logger.getLogger(AnalyseData.class);
     SimpleGraphiteClient objSimpleGraphiteClient;
+    SimpleInfluxDBClient objSimpleInfluxDBClient;
     //Constants
     final static byte RequestTime = 0;
     final static byte ResponseTime = 1;
@@ -29,6 +31,7 @@ public class AnalyseData{
 	
 	public AnalyseData() {
 		objSimpleGraphiteClient = new SimpleGraphiteClient("10.91.80.132", 2003);
+		objSimpleInfluxDBClient = new SimpleInfluxDBClient("10.75.196.228", 8086);
 	}
 	
 	public void extractData(String fileName){
@@ -157,16 +160,40 @@ public class AnalyseData{
 								
 				Set<Entry<String, Long[]>> corrlationIDsEntry = CorrelationIDsandReqResTime.entrySet();
 				Iterator<Entry<String, Long[]>> corrlationIDsIterator = corrlationIDsEntry.iterator();			
-				
-				//iterate through correlation ids				
-				while(corrlationIDsIterator.hasNext()){				
+				ADLog.info("Third Party : "+CorrelationIDsandReqResTimeEntry.getKey());
+				//iterate through correlation ids
+				long previousrequestTimeinMinutes = 0L;
+				long TotalResponseTime = 0L;
+				byte countOfRequests = 0;
+				while(corrlationIDsIterator.hasNext()){			
 					Entry<String, Long[]> corrlationID = corrlationIDsIterator.next();
 					Long times[] = corrlationID.getValue();
+					
 					if(times[1] != null)
 					{
-						ADLog.info(CorrelationIDsandReqResTimeEntry.getKey()+"::"+times[RequestTime]/1000+"::"+new Integer(times[ResponseTime].toString())+""+new Date(times[RequestTime]/1000*1000));
-						//sending response time data to Graphite
-						objSimpleGraphiteClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(times[ResponseTime].toString()),times[RequestTime]/1000);
+						long requestTimeinMinutes = (times[RequestTime]/1000)/60;
+						ADLog.info("RequestTime : "+new Date(requestTimeinMinutes*60*1000)+" ResponseTime : "+times[ResponseTime]);
+											
+						if(previousrequestTimeinMinutes == 0){
+							previousrequestTimeinMinutes = requestTimeinMinutes;
+							TotalResponseTime = times[ResponseTime];
+							countOfRequests = 1;
+						}else if(requestTimeinMinutes == previousrequestTimeinMinutes){
+							TotalResponseTime += times[ResponseTime];
+							countOfRequests ++;
+						}else{							
+							//sending response time data to Graphite
+							objSimpleInfluxDBClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
+							
+							TotalResponseTime = times[ResponseTime];
+							previousrequestTimeinMinutes = requestTimeinMinutes;
+							countOfRequests = 1;
+						}
+						if(corrlationIDsIterator.hasNext() == false){
+							objSimpleInfluxDBClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
+						}
 					}
 					else // incoming request without response 
 					{						
