@@ -55,7 +55,7 @@ public class SimpleInfluxDBClient {
 	  try{
 		  	PostMethod method = new PostMethod("http://"+influxDBHost+":"+influxDBPort+"/db/graphite/series");
 			method.setQueryString("u=root&p=root");		    
-		    method.setRequestBody("[{\"name\":\""+key+"\",\"columns\":[\"time\",\"value\"],\"points\":[["+value+","+timeStamp+"]]}]");
+		    method.setRequestBody("[{\"name\":\""+key+"\",\"columns\":[\"value\",\"time\"],\"points\":[["+value+","+timeStamp+"]]}]");
 		    client.executeMethod(method);
 		    if(method.getStatusCode() != 200){
 		    	throw new Exception("Error response code from InfluxDB");
