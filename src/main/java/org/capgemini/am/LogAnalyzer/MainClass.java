@@ -17,7 +17,7 @@ public class MainClass {
 	public static void main(String args[]){		
 		
 		// Get the application context.
-		applicationContext = new FileSystemXmlApplicationContext("spring-config.xml");
+		applicationContext = new FileSystemXmlApplicationContext("config/spring-config.xml");
 
 	    // Get the application Properties.
 		applicationProperties = applicationContext.getBean("appProperties", Properties.class);

@@ -39,6 +39,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
+                            <classpathPrefix>libs/</classpathPrefix>
                             <mainClass>org.capgemini.am.LogAnalyzer.MainClass</mainClass>
                         </manifest>
                     </archive>
@@ -58,7 +59,7 @@
                         <configuration>
 							<!-- exclude junit, we need runtime dependency only -->
                             <includeScope>runtime</includeScope>
-                            <outputDirectory>${project.build.directory}/</outputDirectory>
+                            <outputDirectory>target/libs</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
