@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -15,13 +14,15 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.capgemini.am.LogAnalyzer.client.BaseClient;
 
 
 public class AnalyseData{
 
     final static Logger ADLog = Logger.getLogger(AnalyseData.class);
-    SimpleGraphiteClient objSimpleGraphiteClient;
-    SimpleInfluxDBClient objSimpleInfluxDBClient;
+    
+    BaseClient objBaseClient;
+    
     //Constants
     final static byte RequestTime = 0;
     final static byte ResponseTime = 1;
@@ -30,8 +31,7 @@ public class AnalyseData{
     Map<String, Map<String, Long[]>> thirdPartyResponse = new LinkedHashMap<String, Map<String, Long[]>>();	
 	
 	public AnalyseData() {
-		objSimpleGraphiteClient = new SimpleGraphiteClient("10.91.80.132", 2003);
-		objSimpleInfluxDBClient = new SimpleInfluxDBClient("10.75.196.228", 8086);
+		objBaseClient = MainClass.applicationContext.getBean("objBaseClient", BaseClient.class);		
 	}
 	
 	public void extractData(String fileName){
@@ -50,7 +50,7 @@ public class AnalyseData{
 				
 			}
 		}catch(Exception e){
-			
+			ADLog.error("Error : "+e);
 		}
 	}	
 	
@@ -183,7 +183,7 @@ public class AnalyseData{
 							countOfRequests ++;
 						}else{							
 							//sending response time data to Graphite
-							objSimpleInfluxDBClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
 							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 							
 							TotalResponseTime = times[ResponseTime];
@@ -191,14 +191,14 @@ public class AnalyseData{
 							countOfRequests = 1;
 						}
 						if(corrlationIDsIterator.hasNext() == false){
-							objSimpleInfluxDBClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
 							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 						}
 					}
 					else // incoming request without response 
 					{						
 						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey()+"\n");
-					}					
+					}
 				}			
 			}
 			thirdPartyResponse = null;
@@ -209,6 +209,7 @@ public class AnalyseData{
 			return 0;
 		} catch (Exception e) {	
 			e.printStackTrace();
+			ADLog.error("Error : "+e);
 			return 1;
 		}
 	}

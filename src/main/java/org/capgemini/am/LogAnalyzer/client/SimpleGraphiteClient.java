@@ -3,7 +3,7 @@
  * Has been copied because the maven distribution does not exist anymore.
  */
 
-package org.capgemini.am.LogAnalyzer;
+package org.capgemini.am.LogAnalyzer.client;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,10 +19,8 @@ import java.util.Map;
  *
  * @author Helmut Zechmann
  */
-public class SimpleGraphiteClient {
-  private String graphiteHost;
-  private int graphitePort;
-
+public class SimpleGraphiteClient extends BaseClient {
+  
   /**
    * Create a new Graphite client.
    *
@@ -30,8 +28,7 @@ public class SimpleGraphiteClient {
    * @param graphitePort Graphite socket. Default is 2003
    */
   public SimpleGraphiteClient(String graphiteHost, Integer graphitePort) {
-    this.graphiteHost = graphiteHost;
-    this.graphitePort = graphitePort;
+    super(graphiteHost,graphitePort);
   }
 
   /**
@@ -51,6 +48,7 @@ public class SimpleGraphiteClient {
    */
   public void sendMetrics(Map<String, Integer> metrics, long timeStamp) {
     try {
+      baseClientLog.info("Sending data to Graphite");
       Socket socket = createSocket();
       OutputStream s = socket.getOutputStream();
       PrintWriter out = new PrintWriter(s, true);
@@ -60,10 +58,11 @@ public class SimpleGraphiteClient {
       }
       out.close();
       socket.close();
+      baseClientLog.info("Successfully data sent to Graphite");
     } catch (UnknownHostException e) {
-      throw new GraphiteException("Unknown host: " + graphiteHost);
+    	baseClientLog.error("Error while sending data :"+e);
     } catch (IOException e) {
-      throw new GraphiteException("Error while writing data to graphite: " + e.getMessage(), e);
+    	baseClientLog.error("Error while sending data :"+e);
     }
   }
 
@@ -91,10 +90,6 @@ public class SimpleGraphiteClient {
     sendMetrics(new HashMap<String, Integer>() {{
       put(key, value);
     }}, timeStamp);
-  }
-
-  protected Socket createSocket() throws UnknownHostException, IOException {
-    return new Socket(graphiteHost, graphitePort);
   }
 
   /**
