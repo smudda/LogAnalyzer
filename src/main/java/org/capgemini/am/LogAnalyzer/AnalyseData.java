@@ -57,6 +57,9 @@ public class AnalyseData{
 	public int analyseData(String fileName){
 		
 		String sCurrentLine;		
+		int totalNoOfRequests = 0;
+		int totalNoOfCheckouts = 0;
+		int totalNoOfPAHCalls = 0;
 		try {
 			
 			//read the file
@@ -65,6 +68,8 @@ public class AnalyseData{
 			while ((sCurrentLine = br.readLine()) != null) {				
 				
 				if(sCurrentLine.contains("Requesting")) {
+					
+					totalNoOfRequests++;
 					
 					sCurrentLine = sCurrentLine.replaceFirst(",", ":");
 					
@@ -92,8 +97,7 @@ public class AnalyseData{
 						else //if correlation id already exist reject it as duplicate. 
 						{
 							ADLog.info("Duplicate Request : thirdParty - "+thirdParty+" / CorrelationID - "+CorrelationID+"\n");					
-						}
-						
+						}						
 					}
 					else //create entry for new third party call 
 					{
@@ -142,6 +146,10 @@ public class AnalyseData{
 					{
 						ADLog.info("Unable to Calculate Time Taken : thirdParty - "+thirdParty+" / CorrelationID - "+CorrelationID+"\n");
 					}
+				}else if(sCurrentLine.contains("Succesfully processed Standard Checkout")){
+					totalNoOfCheckouts++;
+				}else if(sCurrentLine.contains("Query Params received: {token=")){
+					totalNoOfPAHCalls++;
 				}
 			}
 			
@@ -184,23 +192,30 @@ public class AnalyseData{
 						}else{							
 							//sending response time data to Graphite
 							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
-							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
+							ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 							
 							TotalResponseTime = times[ResponseTime];
 							previousrequestTimeinMinutes = requestTimeinMinutes;
 							countOfRequests = 1;
 						}
-						if(corrlationIDsIterator.hasNext() == false){
-							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
-							ADLog.info("Sent : RequestTime : "+previousrequestTimeinMinutes*60*1000+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
-						}
 					}
 					else // incoming request without response 
-					{						
-						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey()+"\n");
+					{
+						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey());
 					}
-				}			
+					if(corrlationIDsIterator.hasNext() == false && countOfRequests != 0){
+						objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+						ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
+					}
+				}
 			}
+			//send total no. of requests
+			objBaseClient.sendMetric("am.logAnalyzer.TotalNoOfRequests",totalNoOfRequests , (System.currentTimeMillis()/1000/60)*60*1000);
+			//send total no. of checkouts
+			objBaseClient.sendMetric("am.logAnalyzer.totalNoOfCheckouts",totalNoOfCheckouts , (System.currentTimeMillis()/1000/60)*60*1000);
+			//send total no. of pah calls
+			objBaseClient.sendMetric("am.logAnalyzer.totalNoOfPAHCalls",totalNoOfPAHCalls , (System.currentTimeMillis()/1000/60)*60*1000);
+			
 			thirdPartyResponse = null;
 			
 			//delete the file
