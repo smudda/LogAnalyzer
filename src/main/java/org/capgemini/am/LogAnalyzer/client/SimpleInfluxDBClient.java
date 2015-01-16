@@ -5,6 +5,8 @@
 
 package org.capgemini.am.LogAnalyzer.client;
 
+import java.util.Date;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.httpclient.HttpClient;
@@ -59,15 +61,21 @@ public class SimpleInfluxDBClient extends BaseClient {
 	 * @throws influxDBException
 	 *             if writing to influxDB fails
 	 */
-	public void sendMetric(final String key, final int value, long timeStamp) {
+	public void sendMetric(final String key, final int value, long timeStamp , int count) {
 		try {
 			baseClientLog.info("Sending data to InfluxDB");
 			PostMethod method = new PostMethod("http://" + host + ":" + port
 					+ "/db/graphite/series");
 			method.setQueryString("u=root&p=root");
-			method.setRequestBody("[{\"name\":\"" + key
-					+ "\",\"columns\":[\"value\",\"time\"],\"points\":[["
-					+ value + "," + timeStamp + "]]}]");
+			if(count != -1){
+				method.setRequestBody("[{\"name\":\"" + key
+						+ "\",\"columns\":[\"value\",\"time\",\"count\"],\"points\":[["
+						+ value + "," + timeStamp + "," + count + "]]}]");
+			}else{
+				method.setRequestBody("[{\"name\":\"" + key
+						+ "\",\"columns\":[\"value\",\"time\"],\"points\":[["
+						+ value + "," + timeStamp + "]]}]");
+			}
 			client.executeMethod(method);
 			baseClientLog.info("Successfully data sent to InfluxDB");
 			if (method.getStatusCode() != 200) {
@@ -89,5 +97,23 @@ public class SimpleInfluxDBClient extends BaseClient {
 	public void sendMetrics(Map<String, Integer> metrics, long timeStamp) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public void sendMetric(String key, int value, long timeStamp) {
+		sendMetric(key, value, timeStamp , -1);
+		
+	}
+
+	@Override
+	public void sendMetrics(String key, Map<Long, Integer> metrics) {
+		
+		Iterator<Long> iterator = metrics.keySet().iterator();
+		while (iterator.hasNext()){
+			Long timestamp = iterator.next(); 
+			baseClientLog.info(key+" - no of requests : "+metrics.get(timestamp)+" timestamp : "+new Date(timestamp));
+			sendMetric(key , metrics.get(timestamp) , timestamp);
+		}
+		
 	}
 }

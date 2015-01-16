@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -57,25 +58,36 @@ public class AnalyseData{
 	public int analyseData(String fileName){
 		
 		String sCurrentLine;		
-		int totalNoOfRequests = 0;
-		int totalNoOfCheckouts = 0;
-		int totalNoOfPAHCalls = 0;
+		Map<Long ,Integer> totalNoOfRequests = new HashMap<Long, Integer>();
+		Map<Long ,Integer> totalNoOfCheckouts = new HashMap<Long, Integer>();
+		Map<Long ,Integer> totalNoOfPAHCalls = new HashMap<Long, Integer>();
+		
 		try {
 			
 			//read the file
 			BufferedReader br = new BufferedReader(new FileReader(fileName));
 			
-			while ((sCurrentLine = br.readLine()) != null) {				
+			while ((sCurrentLine = br.readLine()) != null) {
+				
+				sCurrentLine = sCurrentLine.replaceFirst(",", ":");
+				
+				//time stamp
+				Date timeStamp = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss:SSS", Locale.ENGLISH).parse(sCurrentLine.substring(0,sCurrentLine.indexOf(",")));
+				
+				//per minute long value
+				Long key = (timeStamp.getTime()/1000/60)*60*1000;
 				
 				if(sCurrentLine.contains("Requesting")) {
 					
-					totalNoOfRequests++;
-					
-					sCurrentLine = sCurrentLine.replaceFirst(",", ":");
-					
-					//time stamp of request received
-					Date timeStampRequestReceived = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss:SSS", Locale.ENGLISH).parse(sCurrentLine.substring(0,sCurrentLine.indexOf(",")));
-					
+					if(totalNoOfRequests.isEmpty()){
+						totalNoOfRequests.put(key, 1);
+					}else{
+						if(totalNoOfRequests.containsKey(key))
+							totalNoOfRequests.put(key, totalNoOfRequests.get(key) + 1);
+						else
+							totalNoOfRequests.put(key, 1);
+					}
+										
 					//get the third party call name
 					String thirdParty = sCurrentLine.substring(sCurrentLine.indexOf("INFO") + 5 , sCurrentLine.indexOf("-",sCurrentLine.indexOf("INFO") + 5) -1);
 					
@@ -91,7 +103,7 @@ public class AnalyseData{
 						if(CorrelationIDsandReqResTime.containsKey(CorrelationID) == false){
 							Long[] times = new Long[2];
 							//save received time against correlation id
-							times[RequestTime] = timeStampRequestReceived.getTime();
+							times[RequestTime] = timeStamp.getTime();
 							CorrelationIDsandReqResTime.put(CorrelationID, times);
 						}
 						else //if correlation id already exist reject it as duplicate. 
@@ -104,7 +116,7 @@ public class AnalyseData{
 						CorrelationIDsandReqResTime = new LinkedHashMap<String, Long[]>();
 						
 						Long[] times = new Long[2];						
-						times[RequestTime] = timeStampRequestReceived.getTime();
+						times[RequestTime] = timeStamp.getTime();
 						
 						CorrelationIDsandReqResTime.put(CorrelationID, times);
 						
@@ -112,11 +124,7 @@ public class AnalyseData{
 					}
 				}
 				else if(sCurrentLine.contains("Response received")) {
-					
-					sCurrentLine = sCurrentLine.replaceFirst(",", ":");
-					
-					Date timeStampResponseReceived = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss:SSS", Locale.ENGLISH).parse(sCurrentLine.substring(0,sCurrentLine.indexOf(",")));
-					
+										
 					//get the third party call name
 					String thirdParty = sCurrentLine.substring(sCurrentLine.indexOf("INFO")+5,sCurrentLine.indexOf("-",sCurrentLine.indexOf("INFO")+5)-1);
 					
@@ -132,7 +140,7 @@ public class AnalyseData{
 							
 							Long[] times = CorrelationIDsandReqResTime.get(CorrelationID);							
 							Long requestedTime = times[RequestTime];
-							Long responseTime = timeStampResponseReceived.getTime();
+							Long responseTime = timeStamp.getTime();
 							Long timeTaken = responseTime - requestedTime;
 							//save response time
 							times[ResponseTime] = timeTaken;
@@ -147,9 +155,24 @@ public class AnalyseData{
 						ADLog.info("Unable to Calculate Time Taken : thirdParty - "+thirdParty+" / CorrelationID - "+CorrelationID+"\n");
 					}
 				}else if(sCurrentLine.contains("Succesfully processed Standard Checkout")){
-					totalNoOfCheckouts++;
+
+					if(totalNoOfCheckouts.isEmpty()){
+						totalNoOfCheckouts.put(key, 1);
+					}else{
+						if(totalNoOfCheckouts.containsKey(key))
+							totalNoOfCheckouts.put(key, totalNoOfCheckouts.get(key) + 1);
+						else
+							totalNoOfCheckouts.put(key, 1);
+					}
 				}else if(sCurrentLine.contains("Query Params received: {token=")){
-					totalNoOfPAHCalls++;
+					if(totalNoOfPAHCalls.isEmpty()){
+						totalNoOfPAHCalls.put(key, 1);
+					}else{
+						if(totalNoOfPAHCalls.containsKey(key))
+							totalNoOfPAHCalls.put(key, totalNoOfPAHCalls.get(key) + 1);
+						else
+							totalNoOfPAHCalls.put(key, 1);
+					}
 				}
 			}
 			
@@ -173,7 +196,7 @@ public class AnalyseData{
 				long previousrequestTimeinMinutes = 0L;
 				long TotalResponseTime = 0L;
 				byte countOfRequests = 0;
-				while(corrlationIDsIterator.hasNext()){			
+				while(corrlationIDsIterator.hasNext()){
 					Entry<String, Long[]> corrlationID = corrlationIDsIterator.next();
 					Long times[] = corrlationID.getValue();
 					
@@ -191,7 +214,7 @@ public class AnalyseData{
 							countOfRequests ++;
 						}else{							
 							//sending response time data to Graphite
-							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
 							ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 							
 							TotalResponseTime = times[ResponseTime];
@@ -204,18 +227,26 @@ public class AnalyseData{
 						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey());
 					}
 					if(corrlationIDsIterator.hasNext() == false && countOfRequests != 0){
-						objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000);
+						objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
 						ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 					}
 				}
 			}
 			//send total no. of requests
-			objBaseClient.sendMetric("am.logAnalyzer.TotalNoOfRequests",totalNoOfRequests , (System.currentTimeMillis()/1000/60)*60*1000);
-			//send total no. of checkouts
-			objBaseClient.sendMetric("am.logAnalyzer.totalNoOfCheckouts",totalNoOfCheckouts , (System.currentTimeMillis()/1000/60)*60*1000);
+			if(totalNoOfRequests.isEmpty() == false){				
+
+				objBaseClient.sendMetrics("am.logAnalyzer.TotalNoOfRequests",totalNoOfRequests);
+				
+				//send total no. of checkouts
+				if(totalNoOfCheckouts.isEmpty() == false){
+					objBaseClient.sendMetrics("am.logAnalyzer.totalNoOfCheckouts",totalNoOfCheckouts);
+				}
+			}
 			//send total no. of pah calls
-			objBaseClient.sendMetric("am.logAnalyzer.totalNoOfPAHCalls",totalNoOfPAHCalls , (System.currentTimeMillis()/1000/60)*60*1000);
-			
+			if(totalNoOfPAHCalls.isEmpty() == false){
+				objBaseClient.sendMetrics("am.logAnalyzer.totalNoOfPAHCalls",totalNoOfPAHCalls);
+			}	
+
 			thirdPartyResponse = null;
 			
 			//delete the file

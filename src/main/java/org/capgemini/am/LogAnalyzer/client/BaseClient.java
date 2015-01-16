@@ -40,6 +40,16 @@ public abstract class BaseClient {
 	 *            the timestamp
 	 */
 	public abstract void sendMetrics(Map<String, Integer> metrics, long timeStamp);
+	
+	/**
+	 * Send a set of metrics with a given timestamp to graphite.
+	 * 
+	 * @param metrics
+	 *            the metrics as key-value-pairs
+	 * @param timeStamp
+	 *            the timestamp
+	 */
+	public abstract void sendMetrics(final String key , Map<Long ,Integer> metrics);
 
 	/**
 	 * Send a single metric with the current time as timestamp to graphite.
@@ -66,6 +76,23 @@ public abstract class BaseClient {
 	 *             if writing to graphite fails
 	 */
 	public abstract void sendMetric(final String key, final int value, long timeStamp);
+	
+	/**
+	 * Send a single metric with a given timestamp to graphite.
+	 * 
+	 * @param key
+	 *            The metric key
+	 * @param value
+	 *            The metric value
+	 * @param timeStamp
+	 *            the timestamp to use in ms
+	 * @param count
+	 * 			  the number of requests served	       
+	 *            
+	 * @throws GraphiteException
+	 *             if writing to graphite fails
+	 */
+	public abstract void sendMetric(final String key, final int value, long timeStamp , int count);
 
 	/**
 	 * Compute the current graphite timestamp.
