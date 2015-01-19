@@ -21,6 +21,7 @@ import org.capgemini.am.LogAnalyzer.client.BaseClient;
 public class AnalyseData{
 
     final static Logger ADLog = Logger.getLogger(AnalyseData.class);
+    String seriesNamePrefix;
     
     BaseClient objBaseClient;
     
@@ -31,8 +32,9 @@ public class AnalyseData{
 	//third party call / (correlation ids / response time)
     Map<String, Map<String, Long[]>> thirdPartyResponse = new LinkedHashMap<String, Map<String, Long[]>>();	
 	
-	public AnalyseData() {
-		objBaseClient = MainClass.applicationContext.getBean("objBaseClient", BaseClient.class);		
+	public AnalyseData(String seriesNamePrefix) {
+		objBaseClient = MainClass.applicationContext.getBean("objBaseClient", BaseClient.class);
+		this.seriesNamePrefix = seriesNamePrefix;
 	}
 	
 	public void extractData(String fileName){
@@ -214,7 +216,7 @@ public class AnalyseData{
 							countOfRequests ++;
 						}else{							
 							//sending response time data to Graphite
-							objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
+							objBaseClient.sendMetric(seriesNamePrefix+".responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
 							ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 							
 							TotalResponseTime = times[ResponseTime];
@@ -227,7 +229,7 @@ public class AnalyseData{
 						ADLog.info("NO response/Error response CorrelationID - "+corrlationID.getKey());
 					}
 					if(corrlationIDsIterator.hasNext() == false && countOfRequests != 0){
-						objBaseClient.sendMetric("am.logAnalyzer.responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
+						objBaseClient.sendMetric(seriesNamePrefix+".responsetime."+CorrelationIDsandReqResTimeEntry.getKey().trim(), new Integer(""+(TotalResponseTime / countOfRequests)), previousrequestTimeinMinutes*60*1000 , countOfRequests);
 						ADLog.info("Sent : RequestTime : "+new Date(previousrequestTimeinMinutes*60*1000)+" Average ResponseTime : "+(TotalResponseTime / countOfRequests)+" Total request received : "+countOfRequests);
 					}
 				}
@@ -235,16 +237,16 @@ public class AnalyseData{
 			//send total no. of requests
 			if(totalNoOfRequests.isEmpty() == false){				
 
-				objBaseClient.sendMetrics("am.logAnalyzer.TotalNoOfRequests",totalNoOfRequests);
+				objBaseClient.sendMetrics(seriesNamePrefix+".TotalNoOfRequests",totalNoOfRequests);
 				
 				//send total no. of checkouts
 				if(totalNoOfCheckouts.isEmpty() == false){
-					objBaseClient.sendMetrics("am.logAnalyzer.totalNoOfCheckouts",totalNoOfCheckouts);
+					objBaseClient.sendMetrics(seriesNamePrefix+".totalNoOfCheckouts",totalNoOfCheckouts);
 				}
 			}
 			//send total no. of pah calls
 			if(totalNoOfPAHCalls.isEmpty() == false){
-				objBaseClient.sendMetrics("am.logAnalyzer.totalNoOfPAHCalls",totalNoOfPAHCalls);
+				objBaseClient.sendMetrics(seriesNamePrefix+".totalNoOfPAHCalls",totalNoOfPAHCalls);
 			}	
 
 			thirdPartyResponse = null;

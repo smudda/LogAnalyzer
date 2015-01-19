@@ -20,9 +20,9 @@ public class MainClass {
 		applicationContext = new FileSystemXmlApplicationContext("config/spring-config.xml");
 
 	    // Get the application Properties.
-		applicationProperties = applicationContext.getBean("appProperties", Properties.class);
+		applicationProperties = applicationContext.getBean("appProperties", Properties.class);		
 		  
-		AnalyseData objAnalyseData = new AnalyseData();
+		AnalyseData objAnalyseData = new AnalyseData(""+applicationProperties.get("series.name.prefix"));
 				
 		int result = objAnalyseData.analyseData(""+applicationProperties.get("dss.file.location"));
 				
